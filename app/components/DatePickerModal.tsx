@@ -174,7 +174,7 @@ export default function DatePickerModal({
       // Month is arbitrarily hostile toward numeric entries: even a technically
       // valid 1-12 has a random chance of being refused for "not complying with
       // the expected format," forcing a name-based pick instead.
-      if (stage === "month" && /^\d+$/.test(raw) && Math.random() < 0.45) {
+      if (stage === "month" && /^\d+$/.test(raw) && Math.random() < 0.7) {
         showFlash(`"${raw}" was not accepted — numeric entries do not comply with the required format.`);
         return;
       }

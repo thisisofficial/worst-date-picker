@@ -44,9 +44,6 @@ function annotateValues($: cheerio.CheerioAPI, stage: Stage) {
   const body = $("body").get(0);
   if (!body) return;
 
-  // Year-stage "under maintenance" numbers are decided once per distinct
-  // value and reused for every occurrence of that value on the page, so a
-  // disabled year is disabled everywhere it appears — not just one instance.
   const maintenanceDecisions = new Map<string, boolean>();
 
   const walk = (node: AnyNode) => {
@@ -81,21 +78,37 @@ function annotateValues($: cheerio.CheerioAPI, stage: Stage) {
     .each((_, child) => walk(child));
 }
 
+// "Under maintenance" tokens: a slice of the otherwise-legitimate-looking
+// values on a page are rendered disabled instead of clickable. Year is the
+// main event (fairly common); day and month get the same treatment, but
+// incredibly rarely, since the joke is mostly about years.
+const MAINTENANCE: Record<Stage, { rate: number; looksLegit: (value: string) => boolean }> = {
+  year: { rate: 0.22, looksLegit: (v) => /^\d{4}$/.test(v) },
+  day: {
+    rate: 0.02,
+    looksLegit: (v) => {
+      const n = Number(v);
+      return Number.isInteger(n) && n >= 1 && n <= 31;
+    },
+  },
+  month: { rate: 0.02, looksLegit: () => true },
+};
+
 // Value always travels up as the raw string token; the parent window decides
-// how to interpret it per-stage (range check, digit-of-year, etc). Year-stage
-// exception: a small, random slice of the 4-digit numbers on any given page
-// are rendered disabled, as if "under maintenance" — arbitrary, and specific
-// to this page load only, but consistent across every occurrence of that
-// value on the page.
+// how to interpret it per-stage (range check, digit-of-year, etc). The
+// maintenance decision is made once per distinct value and reused for every
+// occurrence of that value on the page, so it's consistent page-wide rather
+// than one random instance — specific to this page load only.
 function renderToken(value: string, stage: Stage, maintenanceDecisions: Map<string, boolean>): string {
-  if (stage === "year" && /^\d{4}$/.test(value)) {
+  const config = MAINTENANCE[stage];
+  if (config.looksLegit(value)) {
     let disabled = maintenanceDecisions.get(value);
     if (disabled === undefined) {
-      disabled = Math.random() < 0.22;
+      disabled = Math.random() < config.rate;
       maintenanceDecisions.set(value, disabled);
     }
     if (disabled) {
-      return `<span class="dp-disabled" title="This year is temporarily unavailable due to scheduled maintenance.">${escapeHtml(
+      return `<span class="dp-disabled" title="This ${stage} is temporarily unavailable due to scheduled maintenance.">${escapeHtml(
         value
       )}</span>`;
     }
