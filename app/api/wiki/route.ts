@@ -44,6 +44,11 @@ function annotateValues($: cheerio.CheerioAPI, stage: Stage) {
   const body = $("body").get(0);
   if (!body) return;
 
+  // Year-stage "under maintenance" numbers are decided once per distinct
+  // value and reused for every occurrence of that value on the page, so a
+  // disabled year is disabled everywhere it appears — not just one instance.
+  const maintenanceDecisions = new Map<string, boolean>();
+
   const walk = (node: AnyNode) => {
     const el = $(node);
     if (node.type === "tag") {
@@ -63,7 +68,7 @@ function annotateValues($: cheerio.CheerioAPI, stage: Stage) {
       while ((match = pattern.exec(text))) {
         const value = match[1];
         pieces.push(escapeHtml(text.slice(last, match.index)));
-        pieces.push(renderToken(value, stage));
+        pieces.push(renderToken(value, stage, maintenanceDecisions));
         last = match.index + match[0].length;
       }
       pieces.push(escapeHtml(text.slice(last)));
@@ -80,12 +85,20 @@ function annotateValues($: cheerio.CheerioAPI, stage: Stage) {
 // how to interpret it per-stage (range check, digit-of-year, etc). Year-stage
 // exception: a small, random slice of the 4-digit numbers on any given page
 // are rendered disabled, as if "under maintenance" — arbitrary, and specific
-// to this page load only.
-function renderToken(value: string, stage: Stage): string {
-  if (stage === "year" && /^\d{4}$/.test(value) && Math.random() < 0.15) {
-    return `<span class="dp-disabled" title="This year is temporarily unavailable due to scheduled maintenance.">${escapeHtml(
-      value
-    )}</span>`;
+// to this page load only, but consistent across every occurrence of that
+// value on the page.
+function renderToken(value: string, stage: Stage, maintenanceDecisions: Map<string, boolean>): string {
+  if (stage === "year" && /^\d{4}$/.test(value)) {
+    let disabled = maintenanceDecisions.get(value);
+    if (disabled === undefined) {
+      disabled = Math.random() < 0.22;
+      maintenanceDecisions.set(value, disabled);
+    }
+    if (disabled) {
+      return `<span class="dp-disabled" title="This year is temporarily unavailable due to scheduled maintenance.">${escapeHtml(
+        value
+      )}</span>`;
+    }
   }
   return `<a href="#" class="dp-pick" data-value="${escapeHtml(
     value
