@@ -2,15 +2,10 @@
 
 import { useState } from "react";
 import DatePickerModal from "./components/DatePickerModal";
-import { buildQuip } from "./lib/timing";
-import { generateAppointment, type AppointmentResult } from "./lib/ticket";
+import ConfirmationModal from "./components/ConfirmationModal";
+import { formatDate, type PickedDate } from "./lib/date";
 
-type PickedDate = { day: number; month: string; year: number };
 type Stats = { elapsedMs: number; pages: number };
-
-function formatDate(d: PickedDate) {
-  return `${d.month} ${d.day}, ${d.year}`;
-}
 
 const DEPARTMENTS = [
   "General Inquiries",
@@ -40,9 +35,10 @@ const inputClass =
 
 export default function Home() {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerOrigin, setPickerOrigin] = useState<{ x: number; y: number } | null>(null);
   const [dob, setDob] = useState<PickedDate | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [result, setResult] = useState<AppointmentResult | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   return (
     <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 py-16 font-sans">
@@ -60,7 +56,7 @@ export default function Home() {
           onSubmit={(e) => {
             e.preventDefault();
             if (!dob || !stats) return;
-            setResult(generateAppointment(stats));
+            setConfirmOpen(true);
           }}
         >
           <Field label="Email address">
@@ -101,7 +97,11 @@ export default function Home() {
           <Field label="Date of birth">
             <button
               type="button"
-              onClick={() => setPickerOpen(true)}
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setPickerOrigin({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+                setPickerOpen(true);
+              }}
               className="rounded-md border border-zinc-300 px-3 py-2 text-left text-sm text-zinc-900 hover:border-zinc-400"
             >
               {dob ? formatDate(dob) : "Click to select a date"}
@@ -115,36 +115,23 @@ export default function Home() {
           >
             Request appointment
           </button>
-
-          {result && dob && stats && (
-            <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-              <p className="font-semibold">Your appointment has been scheduled.</p>
-              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-emerald-800">
-                <dt className="font-medium">Ticket number</dt>
-                <dd className="font-mono">{result.ticketNumber}</dd>
-                <dt className="font-medium">Appointment date</dt>
-                <dd>{result.appointmentDateStr}</dd>
-                <dt className="font-medium">Position in queue</dt>
-                <dd>{result.peopleAhead.toLocaleString("en-US")} people ahead of you</dd>
-              </dl>
-              <p className="mt-3 text-xs italic text-emerald-700">
-                Date of birth on file: {formatDate(dob)}. {buildQuip(stats.elapsedMs, stats.pages)}
-              </p>
-            </div>
-          )}
         </form>
       </main>
 
       {pickerOpen && (
         <DatePickerModal
+          origin={pickerOrigin}
           onClose={() => setPickerOpen(false)}
           onComplete={(d, s) => {
             setDob(d);
             setStats(s);
-            setResult(null);
             setPickerOpen(false);
           }}
         />
+      )}
+
+      {confirmOpen && dob && stats && (
+        <ConfirmationModal dob={dob} stats={stats} onClose={() => setConfirmOpen(false)} />
       )}
     </div>
   );

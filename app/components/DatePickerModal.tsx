@@ -51,10 +51,20 @@ function isValidCalendarDate(day: number, month: string, year: number) {
 export default function DatePickerModal({
   onComplete,
   onClose,
+  origin,
 }: {
   onComplete: (date: PickedDate, stats: Stats) => void;
   onClose: () => void;
+  origin?: { x: number; y: number } | null;
 }) {
+  // Drives the entrance transition: the modal starts tiny and transparent,
+  // anchored at the clicked field's screen position, then zooms/fades in.
+  const [entered, setEntered] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   const [started, setStarted] = useState(false);
   const [interstitial, setInterstitial] = useState(false);
   const [restartReason, setRestartReason] = useState<RestartReason>("manual");
@@ -161,8 +171,21 @@ export default function DatePickerModal({
         return;
       }
 
+      // Month is arbitrarily hostile toward numeric entries: even a technically
+      // valid 1-12 has a random chance of being refused for "not complying with
+      // the expected format," forcing a name-based pick instead.
+      if (stage === "month" && /^\d+$/.test(raw) && Math.random() < 0.45) {
+        showFlash(`"${raw}" was not accepted — numeric entries do not comply with the required format.`);
+        return;
+      }
+
       const result = interpretPick(stage, raw);
       if (!result.valid) {
+        if (stage === "day") {
+          showFlash(`"${raw}" is not a valid day! Restarting your search.`);
+          refreshPage();
+          return;
+        }
         showFlash(`"${raw}" isn't a valid ${STAGE_LABEL[stage].toLowerCase()}. Keep looking.`);
         return;
       }
@@ -200,8 +223,19 @@ export default function DatePickerModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-6">
-      <div className="flex h-full w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 transition-opacity duration-300 ease-out sm:p-6 ${
+        entered ? "opacity-100" : "opacity-0"
+      }`}
+    >
+      <div
+        style={{
+          transformOrigin: origin ? `${origin.x}px ${origin.y}px` : "center",
+        }}
+        className={`flex h-full w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl transition-transform duration-300 ease-out ${
+          entered ? "scale-100" : "scale-[0.05]"
+        }`}
+      >
         {interstitial ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-5 bg-zinc-50 p-8 text-center">
             <div className="w-full max-w-md rounded-lg border border-zinc-200 bg-white px-6 py-7 shadow-sm">

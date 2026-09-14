@@ -63,15 +63,7 @@ function annotateValues($: cheerio.CheerioAPI, stage: Stage) {
       while ((match = pattern.exec(text))) {
         const value = match[1];
         pieces.push(escapeHtml(text.slice(last, match.index)));
-        // Value always travels up as the raw string token; the parent window
-        // decides how to interpret it per-stage (range check, digit-of-year, etc).
-        pieces.push(
-          `<a href="#" class="dp-pick" data-value="${escapeHtml(
-            value
-          )}" onclick="event.preventDefault();event.stopPropagation();parent.postMessage({type:'dp-select',stage:'${stage}',value:this.dataset.value},'*');return false;">${escapeHtml(
-            value
-          )}</a>`
-        );
+        pieces.push(renderToken(value, stage));
         last = match.index + match[0].length;
       }
       pieces.push(escapeHtml(text.slice(last)));
@@ -82,6 +74,24 @@ function annotateValues($: cheerio.CheerioAPI, stage: Stage) {
   $(body)
     .contents()
     .each((_, child) => walk(child));
+}
+
+// Value always travels up as the raw string token; the parent window decides
+// how to interpret it per-stage (range check, digit-of-year, etc). Year-stage
+// exception: a small, random slice of the 4-digit numbers on any given page
+// are rendered disabled, as if "under maintenance" — arbitrary, and specific
+// to this page load only.
+function renderToken(value: string, stage: Stage): string {
+  if (stage === "year" && /^\d{4}$/.test(value) && Math.random() < 0.15) {
+    return `<span class="dp-disabled" title="This year is temporarily unavailable due to scheduled maintenance.">${escapeHtml(
+      value
+    )}</span>`;
+  }
+  return `<a href="#" class="dp-pick" data-value="${escapeHtml(
+    value
+  )}" onclick="event.preventDefault();event.stopPropagation();parent.postMessage({type:'dp-select',stage:'${stage}',value:this.dataset.value},'*');return false;">${escapeHtml(
+    value
+  )}</a>`;
 }
 
 function escapeHtml(s: string) {
@@ -218,6 +228,15 @@ function renderShell(stage: Stage, title: string, bodyHtml: string) {
     border: 1px solid #e6c200;
   }
   a.dp-pick:hover { background: #ffe45e; }
+  span.dp-disabled {
+    background: #eaecf0;
+    color: #72777d;
+    text-decoration: line-through;
+    padding: 0 3px;
+    border-radius: 3px;
+    border: 1px dashed #a2a9b1;
+    cursor: not-allowed;
+  }
   table.infobox { float: right; margin: 0 0 1em 1em; border: 1px solid #a2a9b1; font-size: 14px; }
   img { max-width: 100%; }
   .dp-error { font-family: sans-serif; padding: 40px; text-align: center; }
