@@ -59,8 +59,21 @@ export default function Home() {
             setConfirmOpen(true);
           }}
         >
-          <Field label="Email address">
-            <input type="email" required placeholder="jane.doe@example.com" className={inputClass} />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Email address">
+              <input type="email" required placeholder="jane.doe@example.com" className={inputClass} />
+            </Field>
+            <Field label="Phone number">
+              <input type="tel" required placeholder="(555) 555-0100" className={inputClass} />
+            </Field>
+          </div>
+
+          <Field label="Street address">
+            <input type="text" required placeholder="123 Main St" className={inputClass} />
+          </Field>
+
+          <Field label="City">
+            <input type="text" required className={inputClass} />
           </Field>
 
           <Field label="Preferred department">
@@ -83,6 +96,10 @@ export default function Home() {
               placeholder="Briefly describe your reason for this appointment"
               className={inputClass}
             />
+          </Field>
+
+          <Field label="Emergency contact name">
+            <input type="text" required className={inputClass} />
           </Field>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
