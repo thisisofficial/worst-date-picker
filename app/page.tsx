@@ -128,7 +128,7 @@ export default function Home() {
           <button
             type="submit"
             disabled={!dob}
-            className="mt-2 rounded-md bg-white px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed"
+            className="mt-2 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
           >
             Request appointment
           </button>

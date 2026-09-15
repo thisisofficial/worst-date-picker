@@ -301,16 +301,16 @@ export default function DatePickerModal({
               . Please confirm this is not an incorrect date, unless it is, in which case please do
               not confirm it.
             </p>
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <button
                 onClick={rejectResult}
-                className="rounded-md bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-500"
+                className="rounded-md bg-green-600 px-8 py-4 text-lg font-bold text-white shadow-lg hover:bg-green-500"
               >
                 No, restart
               </button>
               <button
                 onClick={acceptResult}
-                className="rounded-md bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-500"
+                className="text-xs font-normal text-zinc-400 underline decoration-dotted underline-offset-2 hover:text-zinc-600"
               >
                 Yes, confirm
               </button>
